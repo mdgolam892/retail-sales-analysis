@@ -66,6 +66,10 @@ retail-sales-analysis/
 ├── images/
 ├── README.md
 └── requirements.yml
-=======
-# retail-sales-analysis
->>>>>>> 7d9acb60de83e550d287b80bd109c8d6acc3c3ed
+
+
+## 📈 Sample Visuals
+
+### Top 10 Products by Sales
+![Top Products](images/top_products.png)
+
