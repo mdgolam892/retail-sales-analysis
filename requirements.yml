@@ -1,0 +1,15 @@
+name: retail-analysis
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - pandas
+  - seaborn
+  - matplotlib
+  - jupyter
+
+## 📬 Contact
+
+**MD GOLAM MOHIUDDIN**  
+📧 mdgolammohiuddin892@gmail.com  
+🌐 [LinkedIn](https://www.linkedin.com/in/md-golam-mohiuddin-980b18150/)  
