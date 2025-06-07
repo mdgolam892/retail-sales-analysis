@@ -1,8 +1,9 @@
+HEAD
 # 🛍️ Retail Sales Analysis – Superstore Dataset
 
 Welcome to my data analytics project where I explore, clean, and analyze a retail dataset from a fictional superstore. This end-to-end project demonstrates my skills in Python, Pandas, SQL, and data visualization using Matplotlib and Seaborn.
 
----
+
 
 ## 📁 Dataset Overview
 
@@ -10,7 +11,7 @@ Welcome to my data analytics project where I explore, clean, and analyze a retai
 - **Size**: ~10,000 records
 - **Features**: Order Date, Sales, Profit, Region, Category, Product Name, etc.
 
----
+
 
 ## ✅ Objective
 
@@ -20,19 +21,19 @@ To derive actionable business insights that can help improve:
 - Regional performance
 - Customer segmentation
 
----
+
 
 ## 🛠️ Tools & Skills Used
 
 | Tool / Skill     | Usage                             |
-|------------------|-----------------------------------|
+||--|
 | Python           | Data processing and analysis      |
 | Pandas           | Data wrangling                    |
 | Matplotlib       | Visualization                     |
 | Seaborn          | Advanced plotting                 |
 | Git & GitHub     | Version control & portfolio       |
 
----
+
 
 ## 🔍 Key Analysis & Insights
 
@@ -52,7 +53,7 @@ To derive actionable business insights that can help improve:
 - Certain products like "Phones" contribute heavily to sales.
 - Others, like "Tables," are frequently sold at a loss.
 
----
+
 
 ## 📁 Project Structure
 
@@ -65,3 +66,6 @@ retail-sales-analysis/
 ├── images/
 ├── README.md
 └── requirements.yml
+=======
+# retail-sales-analysis
+>>>>>>> 7d9acb60de83e550d287b80bd109c8d6acc3c3ed
