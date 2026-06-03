@@ -1,0 +1,213 @@
+# DAX Measures — Retail Sales Analytics
+# Table: superstore_clean | Date table: Date
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# MEASURES LIST (11 total):
+#   1. Total Revenue
+#   2. Total Profit
+#   3. Total Orders
+#   4. Profit Margin %
+#   5. Avg Discount %
+#   6. Avg Shipping Days
+#   7. Revenue YoY %
+#   8. Profit YoY %
+#   9. Revenue YTD
+#  10. Revenue 3M Rolling Avg
+#  11. Underperformer Flag
+#
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+# ══════════════════════════════════════════════════════
+# 1. CORE KPI MEASURES
+# ══════════════════════════════════════════════════════
+# Used on: Page 1 (cards), Page 2 (table, bar), Page 3 (scatter, waterfall)
+
+Total Revenue =
+SUM(superstore_clean[sales])
+-- Sums the sales column across all rows in current filter context.
+-- Displayed on Page 1 card (12.64M total), Page 2 table, Page 3 treemap.
+
+
+Total Profit =
+SUM(superstore_clean[profit])
+-- Sums profit across all rows. Can be negative for loss-making rows.
+-- Used on Page 1 card (1.47M), Page 2 table, Page 3 waterfall.
+
+
+Total Orders =
+DISTINCTCOUNT(superstore_clean[order_id])
+-- Counts unique order IDs. DISTINCTCOUNT used instead of COUNT
+-- because multiple line items share the same order_id.
+-- Displayed on Page 1 card (25K), Page 2 table.
+
+
+Profit Margin % =
+DIVIDE(
+    SUM(superstore_clean[profit]),
+    SUM(superstore_clean[sales]),
+    0
+)
+-- DIVIDE safely handles division by zero (returns 0 instead of error).
+-- Returns a decimal (0.1161 = 11.61%). Formatted as % in Measure tools.
+-- Used on Page 1 matrix heatmap, Page 2 bar + table, Page 3 scatter.
+
+
+Avg Discount % =
+AVERAGE(superstore_clean[discount])
+-- discount column stores values as decimals (0.2 = 20%).
+-- Formatted as % in Measure tools.
+-- Used on Page 2 table, Page 3 scatter X-axis.
+
+
+Avg Shipping Days =
+AVERAGE(superstore_clean[shipping_days])
+-- shipping_days is a derived column created in etl.py:
+--   shipping_days = ship_date - order_date (in days)
+-- Used on Page 4 shipping bar chart.
+
+
+# ══════════════════════════════════════════════════════
+# 2. YoY GROWTH MEASURES
+# ══════════════════════════════════════════════════════
+# Used on: Page 1 (card additional value), Page 4 (combo chart line)
+
+Revenue YoY % =
+VAR CurrentYear = MAX(superstore_clean[order_year])
+VAR CurrentRev  = [Total Revenue]
+VAR PriorRev    =
+    CALCULATE(
+        [Total Revenue],
+        superstore_clean[order_year] = CurrentYear - 1
+    )
+RETURN
+    IF(PriorRev = 0, BLANK(), DIVIDE(CurrentRev - PriorRev, PriorRev))
+-- Uses order_year from the fact table directly — no Date table dependency.
+-- Returns decimal (0.27 = 27%). Formatted as % in Measure tools.
+-- In Page 4 combo chart: MAX(order_year) picks each bar's year individually.
+-- In Page 1 card: MAX(order_year) = 2014, so shows 2014 vs 2013 growth.
+
+
+Profit YoY % =
+VAR CurrentYear  = MAX(superstore_clean[order_year])
+VAR CurrentProfit = [Total Profit]
+VAR PriorProfit   =
+    CALCULATE(
+        [Total Profit],
+        superstore_clean[order_year] = CurrentYear - 1
+    )
+RETURN
+    IF(PriorProfit = 0, BLANK(), DIVIDE(CurrentProfit - PriorProfit, PriorProfit))
+-- Same logic as Revenue YoY % but applied to profit.
+-- Used on Page 1 Total Profit card as additional value label.
+
+
+# ══════════════════════════════════════════════════════
+# 3. TIME INTELLIGENCE MEASURES
+# ══════════════════════════════════════════════════════
+# Used on: Page 4 (Revenue YTD card)
+# Requires: Date table marked as date table with active relationship
+#           to superstore_clean[order_date]
+
+Revenue YTD =
+TOTALYTD([Total Revenue], 'Date'[Date])
+-- Accumulates Total Revenue from Jan 1 to the last date in current context.
+-- When no year slicer is selected: returns full dataset total (4.30M = 2014 full year).
+-- When year = 2013 selected: returns 2013 cumulative revenue.
+-- Requires Date table relationship to be active.
+
+
+# ══════════════════════════════════════════════════════
+# 4. TREND MEASURES
+# ══════════════════════════════════════════════════════
+# Used on: Page 1 line chart (second Y-axis line)
+
+Revenue 3M Rolling Avg =
+VAR CurrentMonth = MAX(superstore_clean[order_yearmonth])
+VAR Last3Months =
+    FILTER(
+        ALL(superstore_clean[order_yearmonth]),
+        superstore_clean[order_yearmonth] <= CurrentMonth &&
+        superstore_clean[order_yearmonth] >=
+            FORMAT(
+                EDATE(DATEVALUE(CurrentMonth & "-01"), -2),
+                "YYYY-MM"
+            )
+    )
+RETURN
+    CALCULATE([Total Revenue], Last3Months) / 3
+-- Works on order_yearmonth text column (e.g. "2013-07") — no Date table needed.
+-- For each month point on the chart, looks back 2 months and averages 3 months.
+-- EDATE shifts the date back by 2 months; FORMAT converts back to "YYYY-MM" string.
+-- Smooths out monthly spikes to reveal the underlying revenue trend.
+
+
+# ══════════════════════════════════════════════════════
+# 5. CONDITIONAL FORMATTING MEASURES
+# ══════════════════════════════════════════════════════
+# Used on: Page 2 bar chart (red/green colouring by region performance)
+
+Underperformer Flag =
+VAR OverallAvg =
+    CALCULATE(
+        DIVIDE(SUM(superstore_clean[profit]), SUM(superstore_clean[sales])) * 100,
+        REMOVEFILTERS(superstore_clean[region])
+    )
+VAR CurrentMargin = [Profit Margin %] * 100
+RETURN
+    IF(CurrentMargin < OverallAvg, "Underperformer", "On Target")
+-- OverallAvg: removes region filter to get the global average margin (11.61%).
+-- CurrentMargin: profit margin for the region currently in filter context.
+-- Returns "Underperformer" if region margin < global average, else "On Target".
+-- Used in Page 2 bar chart conditional formatting rules:
+--   "Underperformer" → Red | "On Target" → Green
+
+# ══════════════════════════════════════════════════════
+# 6. ADDITIONAL MEASURES (Page 1 KPI Cards)
+# ══════════════════════════════════════════════════════
+
+Latest Year Revenue YoY % =
+VAR LatestYear  = MAXX(ALL(superstore_clean[order_year]), superstore_clean[order_year])
+VAR CurrentRev  = CALCULATE([Total Revenue], superstore_clean[order_year] = LatestYear)
+VAR PriorRev    = CALCULATE([Total Revenue], superstore_clean[order_year] = LatestYear - 1)
+RETURN
+    DIVIDE(CurrentRev - PriorRev, PriorRev)
+-- MAXX(ALL(...)) ignores all slicers and always finds the absolute latest year (2014).
+-- This is different from Revenue YoY % which uses MAX() — that responds to slicer context.
+-- Here we hardlock to 2014 vs 2013 so the Page 1 card always shows the most recent growth.
+-- Why not just use Revenue YoY %? Because on Page 1 with no year slicer selected,
+-- MAX(order_year) becomes context-dependent and can return wrong values.
+-- Used on: Page 1 Total Revenue card as additional value label.
+
+
+Profit PY =
+CALCULATE(
+    [Total Profit],
+    superstore_clean[order_year] = MAX(superstore_clean[order_year]) - 1
+)
+-- Calculates Total Profit for the prior year relative to current filter context.
+-- MAX(order_year) - 1 shifts back exactly one year.
+-- Example: if year slicer = 2013, returns 2012 profit.
+-- If no slicer selected, MAX = 2014 so returns 2013 profit.
+-- Used as a reference/target value to compare against current year profit.
+-- Used on: Page 1 Total Profit card as additional value or tooltip context.
+
+
+# ══════════════════════════════════════════════════════
+# DATE TABLE (calculated table — not a measure)
+# ══════════════════════════════════════════════════════
+# Create via: Modeling → New Table → paste below
+
+# Date =
+# ADDCOLUMNS(
+#     CALENDAR(DATE(2011,1,1), DATE(2014,12,31)),
+#     "Year",        YEAR([Date]),
+#     "Month",       MONTH([Date]),
+#     "MonthName",   FORMAT([Date], "MMM"),
+#     "Quarter",     "Q" & QUARTER([Date]),
+#     "YearMonth",   FORMAT([Date], "YYYY-MM"),
+#     "YearQuarter", FORMAT([Date], "YYYY") & " Q" & QUARTER([Date])
+# )
+#
+# Relationship: superstore_clean[order_date] →(Many) Date[Date] (One)
+# Mark as date table: select Date table → Table tools → Mark as date table → Date
