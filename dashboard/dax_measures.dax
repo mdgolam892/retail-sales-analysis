@@ -2,7 +2,7 @@
 # Table: superstore_clean | Date table: Date
 # ─────────────────────────────────────────────────────────────────────────────
 #
-# MEASURES LIST (11 total):
+# MEASURES LIST (24 total):
 #   1. Total Revenue
 #   2. Total Profit
 #   3. Total Orders
@@ -14,6 +14,19 @@
 #   9. Revenue YTD
 #  10. Revenue 3M Rolling Avg
 #  11. Underperformer Flag
+#  12. Latest Year Revenue YoY %
+#  13. Profit PY
+#  14. Product Rank by Sales          [NEW — Page 3]
+#  15. Product Rank by Profit         [NEW — Page 3]
+#  16. Is Top 10 Product               [NEW — Page 3]
+#  17. Is Bottom 10 Product            [NEW — Page 3]
+#  18. Total Customers                 [NEW — Page 5 support]
+#  19. Avg Order Value                 [NEW — Page 5 support]
+#  20. Orders per Customer             [NEW — Page 5 support]
+#  21. Top Region by Margin Name/Value [NEW — Page 5 card]
+#  22. Top Category by Profit Name/Value [NEW — Page 5 card]
+#  23. Strongest YoY Growth Year/Value [NEW — Page 5 card]
+#  24. Margin Risk Region Name/Value   [NEW — Page 5 card]
 #
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -162,6 +175,7 @@ RETURN
 -- Used in Page 2 bar chart conditional formatting rules:
 --   "Underperformer" → Red | "On Target" → Green
 
+
 # ══════════════════════════════════════════════════════
 # 6. ADDITIONAL MEASURES (Page 1 KPI Cards)
 # ══════════════════════════════════════════════════════
@@ -191,6 +205,218 @@ CALCULATE(
 -- If no slicer selected, MAX = 2014 so returns 2013 profit.
 -- Used as a reference/target value to compare against current year profit.
 -- Used on: Page 1 Total Profit card as additional value or tooltip context.
+
+
+# ══════════════════════════════════════════════════════
+# 7. PRODUCT RANKING MEASURES  [NEW]
+# ══════════════════════════════════════════════════════
+# Used on: Page 3 — Top 10 / Bottom 10 Products visuals
+
+Product Rank by Sales =
+RANKX(
+    ALL(superstore_clean[product_name]),
+    CALCULATE([Total Revenue]),
+    ,
+    DESC
+)
+-- Ranks every product by total revenue, highest first.
+-- ALL() removes any existing product filter so ranking is computed
+-- across the full product list, not just whatever's currently visible.
+-- Used with a Top N filter (Top 10 by this rank) to drive the
+-- "Top 10 Products by Sales" bar chart on Page 3.
+
+
+Product Rank by Profit =
+RANKX(
+    ALL(superstore_clean[product_name]),
+    CALCULATE([Total Profit]),
+    ,
+    ASC
+)
+-- Same pattern as above, but ASC (ascending) so rank 1 = the MOST
+-- negative profit, i.e. the worst-performing product.
+-- Drives the "Bottom 10 Products by Profit" bar chart on Page 3.
+
+
+Is Top 10 Product =
+IF([Product Rank by Sales] <= 10, "Top 10", "Other")
+-- Simple label used for conditional formatting / legend grouping
+-- if you want to highlight Top 10 products within a larger product list visual.
+
+
+Is Bottom 10 Product =
+IF([Product Rank by Profit] <= 10, "Bottom 10", "Other")
+-- Same idea, for the loss-making side. Used to colour Bottom 10
+-- bars red consistently with the rest of the dashboard's red/green logic.
+
+
+# ══════════════════════════════════════════════════════
+# 8. CUSTOMER BEHAVIOUR MEASURES  [NEW]
+# ══════════════════════════════════════════════════════
+# Used on: Page 1 sidebar cards / Page 5 supporting context
+
+Total Customers =
+DISTINCTCOUNT(superstore_clean[customer_id])
+-- Unique customer count across current filter context.
+-- IMPORTANT: verify no stale slicer (e.g. a single month) is applied
+-- when reading this value — a filtered context will show a misleadingly
+-- low customer count. Always sanity-check with all slicers cleared.
+
+
+Avg Order Value =
+DIVIDE([Total Revenue], [Total Orders], 0)
+-- Average revenue per distinct order. Safe-divides to avoid errors
+-- if Total Orders is ever 0 in a filtered context.
+
+
+Orders per Customer =
+DIVIDE([Total Orders], [Total Customers], 0)
+-- Rough repeat-purchase indicator. Low values (~1) suggest mostly
+-- one-time buyers; higher values suggest customer retention.
+
+
+# ══════════════════════════════════════════════════════
+# 9. STRATEGIC INSIGHTS PAGE — DYNAMIC CARD MEASURES  [NEW]
+# ══════════════════════════════════════════════════════
+# Used on: Page 5 — the 4 headline stat cards
+# Pattern: each measure uses SUMMARIZE + TOPN to dynamically find the
+# "winning" or "losing" category/region/year, so these cards update
+# automatically if the underlying data changes — no hardcoded values.
+
+Top Region by Margin Name =
+VAR RankedRegions =
+    TOPN(
+        1,
+        SUMMARIZE(
+            ALL(superstore_clean[region]),
+            superstore_clean[region],
+            "Margin", [Profit Margin %]
+        ),
+        [Margin], DESC
+    )
+RETURN
+    CONCATENATEX(RankedRegions, superstore_clean[region])
+-- SUMMARIZE builds a virtual table of (region, margin) pairs across ALL regions.
+-- TOPN(1, ..., DESC) picks the single row with the highest margin.
+-- CONCATENATEX extracts just the region name as text for the card title.
+-- Used on Page 5 Card 1: "Top Region by Margin".
+
+
+Top Region by Margin Value =
+VAR RankedRegions =
+    TOPN(
+        1,
+        SUMMARIZE(
+            ALL(superstore_clean[region]),
+            superstore_clean[region],
+            "Margin", [Profit Margin %]
+        ),
+        [Margin], DESC
+    )
+RETURN
+    MAXX(RankedRegions, [Margin])
+-- Same ranking logic as above, but returns the margin VALUE instead of the name.
+-- Used on Page 5 Card 1, displayed below/beside the region name (e.g. "26.62%").
+
+
+Top Category by Profit Name =
+VAR RankedCategories =
+    TOPN(
+        1,
+        SUMMARIZE(
+            ALL(superstore_clean[category]),
+            superstore_clean[category],
+            "Profit", CALCULATE([Total Profit])
+        ),
+        [Profit], DESC
+    )
+RETURN
+    CONCATENATEX(RankedCategories, superstore_clean[category])
+-- Same SUMMARIZE + TOPN pattern, applied to category instead of region.
+-- Used on Page 5 Card 2: "Top Category by Profit" (e.g. "Technology").
+
+
+Top Category by Profit Value =
+VAR RankedCategories =
+    TOPN(
+        1,
+        SUMMARIZE(
+            ALL(superstore_clean[category]),
+            superstore_clean[category],
+            "Profit", CALCULATE([Total Profit])
+        ),
+        [Profit], DESC
+    )
+RETURN
+    MAXX(RankedCategories, [Profit])
+-- Returns the profit value for the top category (e.g. 664K for Technology).
+
+
+Strongest YoY Growth Year =
+VAR RankedYears =
+    TOPN(
+        1,
+        SUMMARIZE(
+            ALL(superstore_clean[order_year]),
+            superstore_clean[order_year],
+            "Growth", [Revenue YoY %]
+        ),
+        [Growth], DESC
+    )
+RETURN
+    MAXX(RankedYears, superstore_clean[order_year])
+-- Finds which year had the single highest YoY revenue growth rate.
+-- Used on Page 5 Card 3: "Strongest YoY Growth" (e.g. "2013").
+
+
+Strongest YoY Growth Value =
+VAR RankedYears =
+    TOPN(
+        1,
+        SUMMARIZE(
+            ALL(superstore_clean[order_year]),
+            superstore_clean[order_year],
+            "Growth", [Revenue YoY %]
+        ),
+        [Growth], DESC
+    )
+RETURN
+    MAXX(RankedYears, [Growth])
+-- Returns the actual YoY % value for that strongest year (e.g. 0.272 = 27.2%).
+
+
+Margin Risk Region Name =
+VAR RankedRegions =
+    TOPN(
+        1,
+        SUMMARIZE(
+            ALL(superstore_clean[region]),
+            superstore_clean[region],
+            "Margin", [Profit Margin %]
+        ),
+        [Margin], ASC
+    )
+RETURN
+    CONCATENATEX(RankedRegions, superstore_clean[region])
+-- Identical pattern to "Top Region by Margin Name" but ASC instead of DESC,
+-- so it finds the LOWEST-margin region instead of the highest.
+-- Used on Page 5 Card 4: "Margin Risk to Watch" (e.g. "Southeast Asia").
+
+
+Margin Risk Region Value =
+VAR RankedRegions =
+    TOPN(
+        1,
+        SUMMARIZE(
+            ALL(superstore_clean[region]),
+            superstore_clean[region],
+            "Margin", [Profit Margin %]
+        ),
+        [Margin], ASC
+    )
+RETURN
+    MAXX(RankedRegions, [Margin])
+-- Returns the margin value for the riskiest region (e.g. 0.0202 = 2.02%).
 
 
 # ══════════════════════════════════════════════════════
