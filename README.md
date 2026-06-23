@@ -1,7 +1,17 @@
 # Retail Sales Analytics Dashboard
 ### Power BI · Python · Pandas · DAX
 
-An end-to-end sales analytics project built on the **Global Superstore** dataset. I designed and developed a 4-page interactive Power BI dashboard to analyse 10,000+ rows of multi-year transactional data, uncovering profitability trends across regions, product categories, and customer segments.
+An end-to-end sales analytics project built on the **Global Superstore** dataset. I designed and developed a 5-page interactive Power BI dashboard to analyse 10,000+ rows of multi-year transactional data, uncovering profitability trends across regions, product categories, and customer segments — and closing with a written insights page that turns the analysis into concrete recommendations.
+
+---
+
+## Objective
+
+To derive actionable business insights that help improve:
+- Profitability and margin health by region and sub-category
+- Product strategy — identifying top performers and loss-making lines
+- Regional performance — spotting underperformers before they're a problem
+- Customer and segment behaviour
 
 ---
 
@@ -13,13 +23,14 @@ Working with raw retail order data, I wanted to build something that goes beyond
 - How has revenue grown year-over-year, and is that growth consistent?
 - Which product sub-categories are being sold at a loss due to heavy discounting?
 - What does the shipping behaviour look like across different ship modes?
+- Given everything above, what should actually change?
 
 ---
 
 ## What I Built
 
 ### ETL Pipeline (`scripts/etl.py`)
-I wrote a Pandas pipeline to clean and transform the raw CSV before loading it into Power BI:
+A Pandas pipeline to clean and transform the raw CSV before loading it into Power BI:
 - Standardised column names and data types
 - Parsed order and ship dates, derived `shipping_days`
 - Engineered new columns: `profit_margin_pct`, `revenue_per_unit`, `discount_band`, `order_yearmonth`
@@ -28,7 +39,7 @@ I wrote a Pandas pipeline to clean and transform the raw CSV before loading it i
 ### Analysis Script (`scripts/analysis.py`)
 A standalone Python script that generates KPI summaries, YoY growth tables, regional breakdowns, and discount impact analysis — exported to Excel as a reference alongside the dashboard.
 
-### Power BI Dashboard (4 pages)
+### Power BI Dashboard (5 pages)
 Built entirely in Power BI Desktop with custom DAX measures and interactive slicers synced across all pages.
 
 ---
@@ -38,9 +49,9 @@ Built entirely in Power BI Desktop with custom DAX measures and interactive slic
 ### Page 1 — Executive Overview
 High-level KPIs with year-over-year context for quick executive consumption.
 
-![Executive Overview](dashboard/screenshots/page1_executive_overview.png)
+![Executive Overview](screenshots/page1_executive_overview.png)
 
-- **KPI Cards**: Total Revenue (12.64M), Total Profit (1.47M), Profit Margin % (11.61%), Total Orders (25K) — each with YoY % as additional value
+- **KPI Cards** (with icons): Total Revenue (12.64M), Total Profit (1.47M), Profit Margin % (11.61%), Total Orders (25K) — each with YoY % built into the card itself, not just a static total
 - **Revenue & Profit Trend**: Line chart over `order_yearmonth` showing both measures across 4 years
 - **Regional Revenue**: Clustered bar comparing Total Revenue and Total Profit by region
 - **Segment Share**: Donut chart — Consumer (51.48%), Corporate (30.25%), Home Office (18.27%)
@@ -51,11 +62,11 @@ High-level KPIs with year-over-year context for quick executive consumption.
 ### Page 2 — Regional Deep Dive
 Built for regional managers to identify underperformers at a glance.
 
-![Regional Deep Dive](dashboard/screenshots/page2_regional_deep_dive.png)
+![Regional Deep Dive](screenshots/page2_regional_deep_dive.png)
 
 - **World Map**: Bubble map sized by Total Revenue with colour encoding by margin — red clusters immediately visible in loss-making areas
 - **Margin Bar Chart**: Regions sorted by Profit Margin % with gradient colouring (red → green) — Southeast Asia (2.02%) and EMEA (5.45%) clearly flagged
-- **Performance Table**: Region | Revenue | Profit | Margin % | Orders | Avg Discount % with conditional formatting
+- **Performance Table**: Region | Revenue | Profit | Margin % | Orders | Avg Discount % — conditionally formatted to match Page 1's heatmap style for visual consistency
 - **Revenue Trend Line**: Monthly revenue filtered dynamically by year/region slicers
 
 ---
@@ -63,11 +74,12 @@ Built for regional managers to identify underperformers at a glance.
 ### Page 3 — Product & Category Analysis
 Focused on understanding which products drive revenue vs which ones erode margin.
 
-![Product & Category Analysis](dashboard/screenshots/page3_product_category.png)
+![Product & Category Analysis](screenshots/page3_product_category.png)
 
 - **Revenue Treemap**: Category → Sub-category hierarchy showing Phones (1.71M) and Copiers (1.51M) dominating Technology
-- **Top Sub-categories Bar**: Horizontal bar filtered to Top 10 by revenue
-- **Discount vs Margin Scatter**: The most insightful visual — 17 dots (one per sub-category) with a trend line and break-even reference line at Y=0. Tables sits at ~30% discount with -0.09 margin, proving discount-driven margin erosion
+- **Top 10 Products by Sales**: Horizontal bar, colour-coded green, surfacing the biggest revenue drivers by name
+- **Bottom 10 Products by Profit**: Horizontal bar, colour-coded red — surfaces loss-making products by name rather than burying them in an aggregate
+- **Discount vs Margin Scatter**: The most insightful visual — one dot per sub-category with a trend line and break-even reference line at Y=0. Tables sits at ~30% discount with -9% margin, proving discount-driven margin erosion
 - **Profit Waterfall**: Sub-category contribution to total profit — Tables is the only red (decrease) bar
 
 ---
@@ -75,7 +87,7 @@ Focused on understanding which products drive revenue vs which ones erode margin
 ### Page 4 — YoY & Trend Analysis
 Revenue growth patterns over time with shipping behaviour analysis.
 
-![YoY & Trend Analysis](dashboard/screenshots/page4_yoy_trend_analysis.png)
+![YoY & Trend Analysis](screenshots/page4_yoy_trend_analysis.png)
 
 - **YoY Combo Chart**: Clustered columns for annual revenue with line overlay showing YoY growth rate (18.5% → 27.2% → 26.3%)
 - **Monthly Small Multiples**: 4 panels (one per year) showing Jan–Dec revenue pattern — Q4 spike visible across all years
@@ -84,18 +96,32 @@ Revenue growth patterns over time with shipping behaviour analysis.
 
 ---
 
+### Page 5 — Strategic Business Insights
+The page that turns the dashboard from "here's what happened" into "here's what to do about it."
+
+![Strategic Business Insights](screenshots/page5_strategic_insights.png)
+
+- **Findings panel**: Six written insights, each anchored to specific numbers already shown on Pages 1–4 (e.g. *"Southeast Asia: 2.02% profit margin despite 1,517 orders and 27.21% avg discount — heaviest discounting actively destroying margin"*)
+- **Recommendations panel**: A paired action for each finding (e.g. *"Cap discount at 15% for Tables and other negative-margin sub-categories"*)
+- **4 headline stat cards**: Top Region by Margin (Canada — 26.62%), Top Category by Profit (Technology — 664K), Strongest YoY Growth (2013 — +27.2%), Margin Risk to Watch (Southeast Asia — 2.02%)
+
+This page exists because raw charts answer *what happened*; stakeholders also need *so what*. Every insight here is read directly off a number already visible elsewhere in the dashboard — nothing here is speculative.
+
+---
+
 ## DAX Measures
 
-I wrote 13 custom DAX measures organised in a `_Measures` display folder. Key ones:
+20+ custom DAX measures organised by page/purpose, including YoY logic baked into KPI cards, Top N/Bottom N product ranking, and dynamic "winner" measures that power the Strategic Insights cards. Key ones:
 
 | Measure | Purpose |
 |---|---|
 | `Profit Margin %` | `DIVIDE(profit, sales, 0)` — safe division, no error on zero sales |
-| `Revenue YoY %` | Year-over-year growth using `MAX(order_year)` context — works on combo chart and card |
-| `Latest Year Revenue YoY %` | Uses `MAXX(ALL(...))` to always return 2014 vs 2013, ignoring slicer context |
-| `Revenue YTD` | `TOTALYTD` against Date table for cumulative tracking |
-| `Revenue 3M Rolling Avg` | Custom rolling average using `order_yearmonth` string — no Date table dependency |
-| `Underperformer Flag` | `REMOVEFILTERS` on region to compare each region against global average margin |
+| `Latest Year Revenue YoY %` | Always compares the most recent year vs prior year, regardless of slicer context |
+| `Product Rank by Sales` / `Product Rank by Profit` | Powers the Top 10 / Bottom 10 product visuals on Page 3 |
+| `Top Region by Margin Name/Value` | Dynamically finds the best-margin region for the Page 5 headline card — updates automatically if data changes |
+| `Margin Risk Region Name/Value` | Dynamically finds the worst-margin region — same logic, opposite direction |
+| `Avg Order Value` / `Orders per Customer` | Customer behaviour metrics |
+| `Revenue YTD` | `TOTALYTD` against the date table for cumulative tracking |
 
 Full DAX with inline comments: [`powerbi/dax_measures.dax`](powerbi/dax_measures.dax)
 
@@ -103,12 +129,19 @@ Full DAX with inline comments: [`powerbi/dax_measures.dax`](powerbi/dax_measures
 
 ## Key Findings
 
-- **Central region** generates the highest revenue (2.82M) but profit is disproportionately lower — driven by high average discount (13.89%)
-- **Canada** has the highest profit margin (26.62%) with 0% average discount — confirms discounting directly erodes margin
-- **Southeast Asia** is the worst performer at 2.02% margin with 27.21% average discount — clear underperformer
-- **Tables** sub-category operates at negative margin (~-9%) at its current discount level of ~30% — should be reviewed for pricing strategy
-- **Q4 revenue spike** is consistent across all 4 years — seasonal demand pattern useful for inventory planning
-- **Standard Class** shipping accounts for 60.5% of all orders with an average 5-day lead time
+- **Southeast Asia**: 2.02% profit margin despite 1,517 orders and a 27.21% average discount — the heaviest discounting in the dataset, actively destroying margin
+- **Central region**: highest order volume (5,249 orders, 2.82M revenue) but only 11.03% margin — versus Canada's 26.62% margin on just 201 orders, exposing an efficiency gap at scale
+- **Revenue grew** from 2.3M (2011) to 4.3M (2014), a sustained climb — yet profit margin held flat at 11–12% throughout, meaning growth hasn't translated into better unit economics
+- **Tables** sub-category turns negative (~-9% margin) at ~30% discount — the only loss-making line on the profit waterfall
+- **EMEA** (5.45%) and **Southeast Asia** (2.02%) are the two lowest-margin regions, both well below the 11.61% portfolio average
+- **Standard Class** shipping handles 60.5% of all 25K orders at a 5-day average lead time — the widest customer-impact area if delayed
+
+**Recommendations arising from these findings:**
+- Cap discount at 15% for Tables and other negative-margin sub-categories
+- Investigate Southeast Asia's discount policy — bring the 27% average down toward the 11.61% portfolio benchmark
+- Replicate Canada's low-discount, high-margin model in comparable mid-size regions
+- Pre-stock inventory and shipping capacity ahead of the recurring Q4 demand spike
+- Set a minimum margin floor per sub-category to prevent revenue growth from masking margin erosion
 
 ---
 
@@ -119,7 +152,7 @@ Full DAX with inline comments: [`powerbi/dax_measures.dax`](powerbi/dax_measures
 | Data cleaning & transformation | Python 3, Pandas, NumPy |
 | Feature engineering | Pandas (derived columns in ETL) |
 | Dashboard & visualisation | Power BI Desktop |
-| Business logic & metrics | DAX (11 custom measures) |
+| Business logic & metrics | DAX (20+ custom measures) |
 | Output validation | openpyxl (Excel summaries) |
 | Dataset | Global Superstore — Kaggle |
 
@@ -130,23 +163,24 @@ Full DAX with inline comments: [`powerbi/dax_measures.dax`](powerbi/dax_measures
 ```
 retail-sales-analytics/
 │
-├── data/
-│   ├── Superstore.csv               ← Raw dataset (download from Kaggle)
-│   ├── superstore_clean.csv         ← Generated by etl.py → load into Power BI
-│   ├── superstore_summary.xlsx      ← Generated by etl.py
-│   └── analysis_output.xlsx         ← Generated by analysis.py
+├── data/                          ← add Superstore.csv here (download from Kaggle)
 │
 ├── scripts/
-│   ├── etl.py                       ← ETL pipeline (run first)
-│   └── analysis.py                  ← KPI & profitability analysis
+│   ├── etl.py                     ← ETL pipeline (run first)
+│   └── analysis.py                ← KPI & profitability analysis
 │
-├── dashboard/
-│   ├── RetailSalesAnalytics.pbix    ← Power BI dashboard
-│   ├── dax_measures.dax             ← All DAX measures with comments
-│   └── screenshots/                     ← Dashboard page screenshots
+├── powerbi/
+│   ├── RetailSalesAnalytics.pbix  ← Power BI dashboard
+│   ├── dax_measures.dax           ← All DAX measures with comments
+│   └── POWERBI_BUILD_GUIDE.md     ← Step-by-step build guide
 │
+├── screenshots/                   ← dashboard page screenshots (5 pages)
+│
+├── README.md
+├── LICENSE
+├── UPLOAD_TO_GIT.md
 ├── requirements.txt
-└── README.md
+└── .gitignore
 ```
 
 ---
@@ -172,7 +206,7 @@ python scripts/etl.py
 python scripts/analysis.py
 
 # 6. Open Power BI
-# Load data/superstore_clean.csv into Power BI Desktop
+# Load the cleaned CSV into Power BI Desktop
 # Open powerbi/RetailSalesAnalytics.pbix
 ```
 
@@ -189,3 +223,11 @@ python scripts/analysis.py
 ## License
 
 MIT License — see [LICENSE](LICENSE) for details.
+
+---
+
+## Contact
+
+**MD GOLAM MOHIUDDIN**
+📧 mdgolammohiuddin892@gmail.com
+🌐 [LinkedIn](https://www.linkedin.com/in/md-golam-mohiuddin-980b18150/)
